@@ -1,0 +1,47 @@
+Score for the database is 78.3333333333333 out of 100
+**********TABLES**********
+011  Profile == 20.8333333333333 points
+011  FitnessTests == 17.5 points
+001  CadetInTest == 15 points
+**********QUERIES**********
+01-  MostAssignedProfile == 25 points
+
+
+**********TABLES**********
+
+Profile
+  -Fields DO NOT Match
+     S: cadetID6  cause20  length  profileID  
+     C: cadetID255  cause255  length  profileID  
+     -cadetID sizes DO NOT match
+     -cause sizes DO NOT match
+  -PKs Match
+  -Relationships Match
+
+FitnessTests
+  -Fields DO NOT Match
+     S: cadre10  location20  testName4  
+     C: cadre255  location255  testName255  
+     -testName sizes DO NOT match
+     -cadre sizes DO NOT match
+     -location sizes DO NOT match
+  -PKs Match
+  -Relationships Match
+
+CadetInTest
+  -Fields DO NOT Match
+     S: cadetID6  passed  testName4  
+     C: cadetID255  passed  testName255  
+     -cadetID sizes DO NOT match
+     -testName sizes DO NOT match
+  -PKs DO NOT Match
+     S: cadetIDtestName
+     C: cadetID
+  -Relationships Match
+
+**********QUERIES**********
+
+MostAssignedProfile ** Output Match
+---------------------------
+
+
