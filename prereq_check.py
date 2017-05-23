@@ -14,7 +14,7 @@ import pypyodbc
 from pprint import pprint
 
 drivers = [x for x in pypyodbc.drivers()]
-print("Below are your drivers")
+print("Below are your drivers:")
 pprint(drivers)
 print("You should see Microsoft Access Driver (*.mdb, *.accdb) in here.")
 
@@ -25,5 +25,5 @@ try:
     print("Good to go!")
     print()
 except AssertionError:
-    print("You are missing the required access driver!!  :'(")
+    print("You are missing the required Access driver!!  :'(")
 
