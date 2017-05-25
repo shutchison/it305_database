@@ -95,13 +95,12 @@ class HH_Database(object):
         connection =  pypyodbc.connect(connect_string)
         return connection.cursor()
 
-    def compare_with_other(self, other, output_file_name = "compare_results.txt"):       
-        print("in equality check method!!")
-        
+    def compare_with_other(self, other, output_file_name = "compare_results.txt"):
         with open(output_file_name, "wt") as out_file:
             # maybe pass our out_file to these methods so they can write to the file themselves?
             self.compare_tables(other)
             self.compare_statistics(other)
+            self.compare_columns(other)
             self.compare_sql_queries(other)
             
     def __repr__(self):
@@ -140,27 +139,132 @@ class HH_Database(object):
         return return_string
         
     def compare_tables(self, other):
-        print("compare_tables is a work in progress")
-
+        mismatch_found = False
+        
+        print("-"*30)
+        print("Comparing tables")
+        print("-"*30)
         if self.tables_to_grade == []:
             print("***WARNING*** You haven't told me which tables to grade.  Call the set_tables_to_grade() method")
         else:
-            pass
+            solution_table = None
+            for table_to_grade in self.tables_to_grade:
+                for table in self.tables:
+                    if table.name == table_to_grade:
+                        solution_table = table
+                        break
+                compare_table = None
+                for other_table in other.tables:
+                    if other_table.name == table_to_grade:
+                        compare_table = other_table
+                        break
+                #print(solution_table)
+                #print(compare_table)
                 
-
+                for field in solution_table._fields:
+                    if field == "catalog":
+                        continue
+                    if getattr(solution_table, field) != getattr(compare_table, field):
+                        print(" -Mismatch detected in " + table_to_grade + "!!!")
+                        print("   -self's " + field + " value is   :", getattr(solution_table, field))
+                        print("   -others's " + field + " value is :", getattr(compare_table, field))
+                        mismatch_found = True
+                    else:
+                        pass
+                        #print(field, " matches")
+        if not mismatch_found:
+            print(" -Tables all check out.  Hooah!")
+        print("-"*30)
+        print()   
     def compare_statistics(self, other):
-        print("compare_statistics not implemented yet")
-        pass
-    
-    def compare_sql_queries(self, other):
-        print("compare_statistics not implemented yet")
-        pass
+        mismatch_found = False
         
+        print("-"*30)
+        print("Comparing statistics")
+        print("-"*30)
+        if self.tables_to_grade == []:
+            print("***WARNING*** You haven't told me which tables to grade.  Call the set_tables_to_grade() method")
+        else:
+            solution_stat = None
+            for table_to_grade in self.tables_to_grade:
+                for stat in self.statistics.values():
+                    if stat.table_name == table_to_grade:
+                        solution_stat = stat
+                        break
+                compare_stat = None
+                for other_stat in other.statistics.values():
+                    if other_stat.table_name == table_to_grade:
+                        compare_stat = other_stat
+                        break
+                #print(solution_stat)
+                #print(compare_stat)
+                
+                for field in solution_stat._fields:
+                    if field == "table_catalog":
+                        continue
+                    if getattr(solution_stat, field) != getattr(compare_stat, field):
+                        print(" -Mismatch detected in " + table_to_grade + "!!!")
+                        print("    -self's " + field + " value is   :", getattr(solution_stat, field))
+                        print("    -others's " + field + " value is :", getattr(compare_stat, field))
+                        mismatch_found = True
+                    else:
+                        pass
+                        #print(field, " matches")
+        if not mismatch_found:
+            print(" -statistics all check out.  Hooah!")
+        print("-"*30)
+        print()
+        
+    def compare_columns(self, other):
+        mismatch_found = False
+        
+        print("-"*30)
+        print("Comparing columns")
+        print("-"*30)
+        if self.tables_to_grade == []:
+            print("***WARNING*** You haven't told me which tables to grade.  Call the set_tables_to_grade() method")
+        else:
+            solution_col = None
+            for table_to_grade in self.tables_to_grade:
+                for col in self.columns.values():
+                    if col.table_name == table_to_grade:
+                        solution_col = col
+                        break
+                compare_col = None
+                for other_col in other.columns.values():
+                    if other_col.table_name == table_to_grade:
+                        compare_col = other_col
+                        break
+                #print(solution_col)
+                #print(compare_col)
+                
+                for field in solution_col._fields:
+                    if field == "table_catalog":
+                        continue
+                    if getattr(solution_col, field) != getattr(compare_col, field):
+                        print("  -Mismatch detected in " + table_to_grade + "!!!")
+                        print("    -self's " + field + " value is   :", getattr(solution_col, field))
+                        print("    -others's " + field + " value is :", getattr(compare_col, field))
+                        mismatch_found = True
+                    else:
+                        pass
+                        #print(field, " matches")
+        if not mismatch_found:
+            print("  -Columns all check out.  Hooah!")
+        print("-"*30)
+        print()
+        
+    def compare_sql_queries(self, other):
+            print("compare_sql_queries not implemented yet")
+            pass
+    
 solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")    
 cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
 
+# With an overloaded str function, you can print the database!
 print(solution_database_obj)
 
+solution_database_obj.set_tables_to_grade(['Cadet', 'CadetInTest', 'FitnessTests', 'Profile'])
 solution_database_obj.compare_with_other(cadet_database_obj)
 
 
