@@ -4,7 +4,7 @@
 
 import pypyodbc
 from pprint import pprint
-from collections import namedtuple
+from named_tuples_definitions import *
 
 # The Hutchison-Hussey (in that order) database class definition.
 class HH_Database(object):
@@ -28,55 +28,6 @@ class HH_Database(object):
         populates class varibles.     
         """
         table_cursor = self.get_cursor()
-        # explaination for what these mean is here:
-        # https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqltables-function
-        table_argument_names = ["catalog",
-                                "schema",
-                                "name",
-                                "type",
-                                "remarks"]
-        table = namedtuple("table", table_argument_names)
-
-        # explaination for what these mean is here:
-        # https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlstatistics-function
-        statistic_argument_names = ["table_catalog", 
-                                  "table_schema",
-                                  "table_name",
-                                  "non_unique",
-                                  "index_qualifier",
-                                  "index_name",
-                                  "type",
-                                  "ordinal_position",
-                                  "column_name",
-                                  "asc_or_desc",
-                                  "cardinality",
-                                  "pages",
-                                  "filter_condition"]                         
-        table_statistic = namedtuple("table_statistic", statistic_argument_names)
-
-        # explaination for what these mean is here:
-        #https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlcolumns-function
-        column_argument_names = ["table_catalog",
-                                 "table_schema",
-                                 "table_name",
-                                 "column_name",
-                                 "data_type",
-                                 "type_name",
-                                 "column_size",
-                                 "buffer_length",
-                                 "decimal_digits",
-                                 "num_prec_radix",
-                                 "nullable",
-                                 "remarks",
-                                 "column_def",
-                                 "sql_data_type",
-                                 "sql_datetime_sub",
-                                 "char_octet_length",
-                                 "ordinal_position",
-                                 "is_nullable",
-                                 "unknown_thing_not_documented"] 
-
-        column = namedtuple("column", column_argument_names)
 
         for t in list(table_cursor.tables()):
             t = table(*t)
@@ -96,12 +47,20 @@ class HH_Database(object):
         return connection.cursor()
 
     def compare_with_other(self, other, output_file_name = "compare_results.txt"):
-        with open(output_file_name, "wt") as out_file:
-            # maybe pass our out_file to these methods so they can write to the file themselves?
-            self.compare_tables(other)
-            self.compare_statistics(other)
-            self.compare_columns(other)
-            self.compare_sql_queries(other)
+        if self.tables_to_grade == []:
+            print("***WARNING*** You haven't told me which tables to grade.  Call the set_tables_to_grade() method")
+        else:
+            with open(output_file_name, "wt") as out_file:
+                # maybe pass our out_file to these methods so they can write to the file themselves?
+                for table_to_grade in self.tables_to_grade:
+                    print("-"*30)
+                    print("Checking table:", table_to_grade)
+                    print("-"*30)
+                    self.compare_tables(other, table_to_grade)
+                    self.compare_statistics(other, table_to_grade)
+                    self.compare_columns(other, table_to_grade)
+                    self.compare_sql_queries(other)
+                    print()
             
     def __repr__(self):
         return self.__class__.__name__ + "(" + repr(self.path_to_database) + ")"
@@ -138,131 +97,102 @@ class HH_Database(object):
     
         return return_string
         
-    def compare_tables(self, other):
+    def compare_tables(self, other, table_name):
         mismatch_found = False
+
+        solution_table = self.get_namedtuple_by_table_name("tables", table_name)
+        compare_table = other.get_namedtuple_by_table_name("tables", table_name)
+        #print(solution_table)
+        #print(compare_table)
         
-        print("-"*30)
-        print("Comparing tables")
-        print("-"*30)
-        if self.tables_to_grade == []:
-            print("***WARNING*** You haven't told me which tables to grade.  Call the set_tables_to_grade() method")
-        else:
-            solution_table = None
-            for table_to_grade in self.tables_to_grade:
-                for table in self.tables:
-                    if table.name == table_to_grade:
-                        solution_table = table
-                        break
-                compare_table = None
-                for other_table in other.tables:
-                    if other_table.name == table_to_grade:
-                        compare_table = other_table
-                        break
-                #print(solution_table)
-                #print(compare_table)
-                
-                for field in solution_table._fields:
-                    if field == "catalog":
-                        continue
-                    if getattr(solution_table, field) != getattr(compare_table, field):
-                        print(" -Mismatch detected in " + table_to_grade + "!!!")
-                        print("   -self's " + field + " value is   :", getattr(solution_table, field))
-                        print("   -others's " + field + " value is :", getattr(compare_table, field))
-                        mismatch_found = True
-                    else:
-                        pass
-                        #print(field, " matches")
+        for field in solution_table._fields:
+            if field == "catalog":
+                continue
+            if getattr(solution_table, field) != getattr(compare_table, field):
+                print(" -Mismatch detected in tables!!!")
+                print("   -self's " + field + " value is   :", getattr(solution_table, field))
+                print("   -others's " + field + " value is :", getattr(compare_table, field))
+                mismatch_found = True
+            else:
+                pass
+                #print(field, " matches")
         if not mismatch_found:
-            print(" -Tables all check out.  Hooah!")
-        print("-"*30)
-        print()   
-    def compare_statistics(self, other):
+            print("  -Table fields all check out.  Hooah!")  
+
+    def compare_statistics(self, other, table_name):
         mismatch_found = False
+
+        solution_stat = self.get_namedtuple_by_table_name("statistics", table_name)
+        compare_stat = other.get_namedtuple_by_table_name("statistics", table_name)
+        #print(solution_stat)
+        #print(compare_stat)
         
-        print("-"*30)
-        print("Comparing statistics")
-        print("-"*30)
-        if self.tables_to_grade == []:
-            print("***WARNING*** You haven't told me which tables to grade.  Call the set_tables_to_grade() method")
-        else:
-            solution_stat = None
-            for table_to_grade in self.tables_to_grade:
-                for stat in self.statistics.values():
-                    if stat.table_name == table_to_grade:
-                        solution_stat = stat
-                        break
-                compare_stat = None
-                for other_stat in other.statistics.values():
-                    if other_stat.table_name == table_to_grade:
-                        compare_stat = other_stat
-                        break
-                #print(solution_stat)
-                #print(compare_stat)
-                
-                for field in solution_stat._fields:
-                    if field == "table_catalog":
-                        continue
-                    if getattr(solution_stat, field) != getattr(compare_stat, field):
-                        print(" -Mismatch detected in " + table_to_grade + "!!!")
-                        print("    -self's " + field + " value is   :", getattr(solution_stat, field))
-                        print("    -others's " + field + " value is :", getattr(compare_stat, field))
-                        mismatch_found = True
-                    else:
-                        pass
-                        #print(field, " matches")
+        for field in solution_stat._fields:
+            if field == "table_catalog":
+                continue
+            if getattr(solution_stat, field) != getattr(compare_stat, field):
+                print("  -Mismatch detected in statistics!!!")
+                print("    -self's " + field + " value is   :", getattr(solution_stat, field))
+                print("    -others's " + field + " value is :", getattr(compare_stat, field))
+                mismatch_found = True
+            else:
+                pass
+                #print(field, " matches")
         if not mismatch_found:
-            print(" -statistics all check out.  Hooah!")
-        print("-"*30)
-        print()
+            print("  -Statistic fields all check out.  Hooah!")
         
-    def compare_columns(self, other):
+    def compare_columns(self, other, table_name):
         mismatch_found = False
+
+        solution_col = self.get_namedtuple_by_table_name("columns", table_name)
+        compare_col = other.get_namedtuple_by_table_name("columns", table_name)
+
+        #print(solution_col)
+        #print(compare_col)
         
-        print("-"*30)
-        print("Comparing columns")
-        print("-"*30)
-        if self.tables_to_grade == []:
-            print("***WARNING*** You haven't told me which tables to grade.  Call the set_tables_to_grade() method")
-        else:
-            solution_col = None
-            for table_to_grade in self.tables_to_grade:
-                for col in self.columns.values():
-                    if col.table_name == table_to_grade:
-                        solution_col = col
-                        break
-                compare_col = None
-                for other_col in other.columns.values():
-                    if other_col.table_name == table_to_grade:
-                        compare_col = other_col
-                        break
-                #print(solution_col)
-                #print(compare_col)
-                
-                for field in solution_col._fields:
-                    if field == "table_catalog":
-                        continue
-                    if getattr(solution_col, field) != getattr(compare_col, field):
-                        print("  -Mismatch detected in " + table_to_grade + "!!!")
-                        print("    -self's " + field + " value is   :", getattr(solution_col, field))
-                        print("    -others's " + field + " value is :", getattr(compare_col, field))
-                        mismatch_found = True
-                    else:
-                        pass
-                        #print(field, " matches")
+        for field in solution_col._fields:
+            if field == "table_catalog":
+                continue
+            if getattr(solution_col, field) != getattr(compare_col, field):
+                print("  -Mismatch detected in columns!!!")
+                print("    -self's " + field + " value is   :", getattr(solution_col, field))
+                print("    -others's " + field + " value is :", getattr(compare_col, field))
+                mismatch_found = True
+            else:
+                pass
+                #print(field, " matches")
         if not mismatch_found:
-            print("  -Columns all check out.  Hooah!")
-        print("-"*30)
-        print()
+            print("  -Column fields all check out.  Hooah!")
         
     def compare_sql_queries(self, other):
-            print("compare_sql_queries not implemented yet")
-            pass
-    
+        print("compare_sql_queries not implemented yet")
+        pass
+        
+    def get_namedtuple_by_table_name(self, tuple_name, name_of_table):
+        if tuple_name == "tables":
+            for table in self.tables:
+                if table.name == name_of_table:
+                    return table
+        elif tuple_name == "columns":
+            for col in self.columns.values():
+                if col.table_name == name_of_table:
+                    return col
+        elif tuple_name == "statistics":
+            for stat in self.statistics.values():
+                if stat.table_name == name_of_table:
+                    return stat
+        else:
+            print("No attribute named:", tuple_name)
+            exit()
+                        
 solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")    
 cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
 
 # With an overloaded str function, you can print the database!
 print(solution_database_obj)
+print("==="*30)
+print(cadet_database_obj)
+print("==="*30)
 
 solution_database_obj.set_tables_to_grade(['Cadet', 'CadetInTest', 'FitnessTests', 'Profile'])
 solution_database_obj.compare_with_other(cadet_database_obj)
