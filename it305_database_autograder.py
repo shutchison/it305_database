@@ -219,10 +219,15 @@ solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")
 cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
 
 # With an overloaded str function, you can print the database!
+print("==="*30)
+print("Solution database is:")
+print("==="*30)
 print(solution_database_obj)
 print("==="*30)
-print(cadet_database_obj)
-print("==="*30)
+#print("Cadet database is:")
+#print("==="*30)
+#print(cadet_database_obj)
+#print("==="*30)
 
 solution_database_obj.set_tables_to_grade(['Cadet', 'CadetInTest', 'FitnessTests', 'Profile'])
 solution_database_obj.compare_with_other(cadet_database_obj)
@@ -245,3 +250,9 @@ solution_database_obj.compare_with_other(cadet_database_obj)
 #    
 #        print(i, "-",field, ":", getattr(col, field))
 #        i += 1
+
+#for relationships, look in the statistics:
+#if index_name == None, this table_statistic contains the statistics about that table.
+#if index_name == PrimaryKey, this means that column name contains the primary key for this table. 
+#sometimes is a combination of the two tables.  i.e. CadetCadetInTest  This is a foreign key 1-many from cadet to cadetInTest where the column name specifies what the foreign key is
+#if index_name == a column on this table
