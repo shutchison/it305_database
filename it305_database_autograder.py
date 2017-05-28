@@ -143,6 +143,12 @@ class HH_Database(object):
             print("  -Table fields all check out.  Hooah!")  
 
     def compare_statistics(self, other, table_name):
+        print("************compare_statistics not working yet***********")
+        #Clearly, this is Princess Leia...
+        print("@(-_-)@ \"Help me Jason Hussey!  You\'re my only hope!\"") 
+        print("************")
+        return
+
         mismatch_found = False
 
         solution_stat_list = self.get_namedtuple("statistics", table_name)
@@ -174,28 +180,37 @@ class HH_Database(object):
     def compare_columns(self, other, table_name):
         mismatch_found = False
 
-        solution_col = self.get_namedtuple("columns", table_name)
-        compare_col = other.get_namedtuple("columns", table_name)
-
-        #print(solution_col)
-        #print(compare_col)
+        #I don't know which fields you don't care about, but put them in 
+        #this list of strings
+        fields_to_ignore = ["table_catalog"]
         
-        for field in solution_col._fields:
-            if field == "table_catalog":
-                continue
-            if getattr(solution_col, field) != getattr(compare_col, field):
-                print("  -Mismatch detected in columns!!!")
-                print("    -self's " + field + " value is   :", getattr(solution_col, field))
-                print("    -others's " + field + " value is :", getattr(compare_col, field))
-                mismatch_found = True
-            else:
-                pass
-                #print(field, " matches")
+        solution_col_list = self.get_namedtuple("columns", table_name)
+        #pprint(solution_col_list)
+        
+        for solution_col in solution_col_list:
+        
+            compare_col = other.get_namedtuple("columns", table_name, solution_col.column_name)
+            #print(compare_col)
+        
+            for field in solution_col._fields:
+                if field in fields_to_ignore:
+                    continue
+                if getattr(solution_col, field) != getattr(compare_col, field):
+                    if mismatch_found == False:
+                        mismatch_found = True
+                        print("  -Mismatched columns detected!")
+                        print("    -" + solution_col.column_name, "does not match")
+                    print("      -self's " + field + " value is   :", getattr(solution_col, field))
+                    print("      -others's " + field + " value is :", getattr(compare_col, field))
+                    
+                else:
+                    pass
+                    #print(field, " matches")
         if not mismatch_found:
             print("  -Column fields all check out.  Hooah!")
         
     def compare_sql_queries(self, other):
-        print("compare_sql_queries not implemented yet")
+        print("************compare_sql_queries not implemented yet***********")
         pass
         
     def get_namedtuple(self, tuple_name, name_of_table, name_of_column=""):
@@ -206,9 +221,12 @@ class HH_Database(object):
         elif tuple_name == "statistics":
             return self.statistics[name_of_table]
         elif tuple_name == "columns":
-            for column in self.columns[name_of_table]:
-                if column.column_name == name_of_column:
-                    return column
+            if name_of_column == "":
+                return self.columns[name_of_table]
+            else:
+                for column in self.columns[name_of_table]:
+                    if column.column_name == name_of_column:
+                        return column
 
             
         else:
@@ -224,10 +242,10 @@ print("Solution database is:")
 print("==="*30)
 print(solution_database_obj)
 print("==="*30)
-#print("Cadet database is:")
-#print("==="*30)
-#print(cadet_database_obj)
-#print("==="*30)
+print("Cadet database is:")
+print("==="*30)
+print(cadet_database_obj)
+print("==="*30)
 
 solution_database_obj.set_tables_to_grade(['Cadet', 'CadetInTest', 'FitnessTests', 'Profile'])
 solution_database_obj.compare_with_other(cadet_database_obj)
