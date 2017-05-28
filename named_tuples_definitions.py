@@ -1,3 +1,12 @@
+"""
+These named tuples allow for named access to the tables, statistics or columns.
+Instead of using index numbers, like cursor.tables()[2], you can use 
+cursor.tables().name.  Improves readability of the code, and also makes the
+items returned by pypyodbc more meaningful.  These are imported by
+it305_database_autograder.py and are separated into this file to improve 
+maintainability and readability of the main grading file.
+"""
+
 from collections import namedtuple
 
 # explaination for what these mean is here:
@@ -48,29 +57,3 @@ column_argument_names = ["table_catalog",
                          "is_nullable",
                          "unknown_thing_not_documented"] 
 column = namedtuple("column", column_argument_names)
-
-# https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlprimarykeys-function
-primary_key_argument_names = ["table_cat",
-                              "table_schema",
-                              "table_name",
-                              "column_name",
-                              "key_seq",
-                              "pk_name"]
-primary_key = namedtuple("primary_key", primary_key_argument_names)
-
-# https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/sqlforeignkeys-function
-foreign_key_argument_names = ["pktable_cat",
-                              "pktable_schema",
-                              "pktable_name",
-                              "pkcolumn_name",
-                              "fktable_cat",
-                              "fktable_schema",
-                              "fktable_name",
-                              "fkcolumn_name",
-                              "key_seq",
-                              "update_rule",
-                              "delete_rule",
-                              "fk_name",
-                              "pk_name",
-                              "deferrability"]
-foreign_key = namedtuple("foreign_key", foreign_key_argument_names)
