@@ -12,14 +12,23 @@ class HH_Database(object):
     def __init__(self, path_to_database):
         self.path_to_database = path_to_database
         
+        connect_string = r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};" + "Dbq={0};".format(self.path_to_database) 
+        self.connection = pypyodbc.connect(connect_string)
+        self.database_cursor = self.connection.cursor()
+        
+        
         self.tables = []
         self.statistics = {} # key: table_name, value: list of table_statistics namedtuples
         self.columns = {} # key: table_name, value: list of column namedtuples
+        self.primary_keys = {}
+        self.foreign_keys = {}
         self.sql_queries = []
 
         self.tables_to_grade = []
         
         self.get_table_info()
+        
+        self.connection.close()
         
     def set_tables_to_grade(self, tables_list):
         self.tables_to_grade = tables_list
@@ -28,24 +37,28 @@ class HH_Database(object):
         """
         populates class varibles.     
         """
-        table_cursor = self.get_cursor()
-
-        for t in list(table_cursor.tables()):
+        for t in list(self.database_cursor.tables()):
             t = table(*t)
             if t.type == "TABLE":
                 
                 self.tables.append(t)
-                
-                ### HERE IS WHERE IT IS!!!
-                
-                for stat in list(table_cursor.statistics(t.name)):
+
+                for stat in list(self.database_cursor.statistics(t.name)):
                     stat = table_statistic(*stat)
-                    if t.name not in self.statistics:
-                        self.statistics[t.name] = [stat]
-                    else:
-                        self.statistics[t.name].append(stat)
-                
-                for col in list(table_cursor.columns(t.name)):
+                    if stat.non_unique == None:
+                        self.statistics[t.name] = stat
+                    elif stat.non_unique == 0 and stat.table_name not in stat.index_name:
+                        if t.name not in self.primary_keys:
+                            self.primary_keys[t.name] = [stat]
+                        else:
+                            self.primary_keys[t.name].append(stat)
+                    elif stat.non_unique == 1 or stat.table_name in stat.index_name:
+                        if t.name not in self.foreign_keys:
+                            self.foreign_keys[t.name] = [stat]
+                        else:
+                            self.foreign_keys[t.name].append(stat)
+                        
+                for col in list(self.database_cursor.columns(t.name)):
                     col = column(*col)
                     if t.name not in self.columns:
                         self.columns[t.name] = [col]
@@ -54,13 +67,6 @@ class HH_Database(object):
                         
             elif t.type == "VIEW":
                 self.sql_queries.append(t)
-
-    
-    def get_cursor(self):
-        connect_string = r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};" + "Dbq={0};".format(self.path_to_database)
-        #print(connect_string)
-        connection =  pypyodbc.connect(connect_string)
-        return connection.cursor()
 
     def compare_with_other(self, other, output_file_name = "compare_results.txt"):
         if self.tables_to_grade == []:
@@ -73,11 +79,37 @@ class HH_Database(object):
                     print("Checking table:", table_to_grade)
                     print("-"*30)
                     self.compare_tables(other, table_to_grade)
-                    self.compare_statistics(other, table_to_grade)
+                    self.compare_statistics(other, table_to_grade) #may be unneccessary now
+                    self.compare_primary_keys(other, table_to_grade)
                     self.compare_columns(other, table_to_grade)
                     self.compare_sql_queries(other)
                     print()
-            
+                    
+    def compare_primary_keys(self, other, table_name):
+        mismatch_found = False
+
+        ignore_fields = ['table_catalog']
+        
+        solution_pk_list = self.get_namedtuple("primary_keys", table_name)
+        
+        for solution_pk in solution_pk_list:
+            print("solution:", solution_pk)
+            compare_pk = other.get_namedtuple("primary_keys", table_name, solution_pk.column_name)
+            print("compare:",compare_pk)
+            for field in solution_pk._fields:
+                if field in ignore_fields:
+                    #differnt database files are expected to have different names.
+                    continue
+                if getattr(solution_pk, field) != getattr(compare_pk, field):
+                    print(" -Mismatch detected in primary keys!!!")
+                    print("   -solution's " + field + " value is   :", getattr(solution_pk, field))
+                    print("   -cadet's " + field + " value is :", getattr(compare_pk, field))
+                    mismatch_found = True
+                else:
+                    pass
+                #print(field, " matches")
+        if not mismatch_found:
+            print("  -Primary Key fields all check out.  Hooah!") 
     def __repr__(self):
         return self.__class__.__name__ + "(" + repr(self.path_to_database) + ")"
         
@@ -95,12 +127,30 @@ class HH_Database(object):
         return_string += "Statistics are:\n"
         return_string += "-"*30 + "\n"
         for k,v in self.statistics.items():
+            return_string += "  - " + k + ": " + str(v) + "\n"
+        return_string += "\n"
+        return_string += "\n"
+        
+        return_string += "-"*30 + "\n"
+        return_string += "primary keys are:\n"
+        return_string += "-"*30 + "\n"
+        for k,v in self.primary_keys.items():
             return_string += "- " + str(k) + "\n"
             for stat in v:
                 return_string += "    - " + str(stat) + "\n"
             return_string += "\n"
         return_string += "\n"
-
+        
+        return_string += "-"*30 + "\n"
+        return_string += "foreign keys are:\n"
+        return_string += "-"*30 + "\n"
+        for k,v in self.foreign_keys.items():
+            return_string += "- " + str(k) + "\n"
+            for stat in v:
+                return_string += "    - " + str(stat) + "\n"
+            return_string += "\n"
+        return_string += "\n"
+        
         return_string += "-"*30 + "\n"
         return_string += "Columns are:\n"
         return_string += "-"*30 + "\n"
@@ -133,8 +183,8 @@ class HH_Database(object):
                 continue
             if getattr(solution_table, field) != getattr(compare_table, field):
                 print(" -Mismatch detected in tables!!!")
-                print("   -self's " + field + " value is   :", getattr(solution_table, field))
-                print("   -others's " + field + " value is :", getattr(compare_table, field))
+                print("   -solution's " + field + " value is   :", getattr(solution_table, field))
+                print("   -cadet's " + field + " value is :", getattr(compare_table, field))
                 mismatch_found = True
             else:
                 pass
@@ -143,37 +193,26 @@ class HH_Database(object):
             print("  -Table fields all check out.  Hooah!")  
 
     def compare_statistics(self, other, table_name):
-        print("************compare_statistics not working yet***********")
-        #Clearly, this is Princess Leia...
-        print("@(-_-)@ \"Help me Jason Hussey!  You\'re my only hope!\"") 
-        print("************")
-        return
-
         mismatch_found = False
 
-        solution_stat_list = self.get_namedtuple("statistics", table_name)
-        compare_stat_list = other.get_namedtuple("statistics", table_name)
-        #print(solution_stat_list)
-        #print(compare_stat_list)
-        
+        solution_stat = self.get_namedtuple("statistics", table_name)
+        compare_stat = other.get_namedtuple("statistics", table_name)
+        #print(solution_stat)
+        #print(compare_stat)
 
-        # making an assumption that they will be in the same order here...
-        # not very robust...  On second thought, this will not work  :(
-        for index, solution_stat in enumerate(solution_stat_list):
-            print("comparing:")
-            print(solution_stat)
-            print(compare_stat_list[index])
-            for field in solution_stat._fields:
-                if field == "table_catalog":
-                    continue
-                if getattr(solution_stat, field) != getattr(compare_stat_list[index], field):
-                    print("  -Mismatch detected in statistics!!!")
-                    print("    -self's " + field + " value is   :", getattr(solution_stat, field))
-                    print("    -others's " + field + " value is :", getattr(compare_stat_list[index], field))
-                    mismatch_found = True
-                else:
-                    pass
-                    #print(field, " matches")
+        ignore_fields = ['table_catalog']
+        
+        for field in solution_stat._fields:
+            if field in ignore_fields:
+                continue
+            if getattr(solution_stat, field) != getattr(compare_stat, field):
+                print("  -Mismatch detected in statistics!!!")
+                print("    -self's " + field + " value is   :", getattr(solution_stat, field))
+                print("    -others's " + field + " value is :", getattr(compare_stat, field))
+                mismatch_found = True
+            else:
+                pass
+                #print(field, " matches")
         if not mismatch_found:
             print("  -Statistic fields all check out.  Hooah!")
         
@@ -227,8 +266,13 @@ class HH_Database(object):
                 for column in self.columns[name_of_table]:
                     if column.column_name == name_of_column:
                         return column
-
-            
+        elif tuple_name == "primary_keys":
+            if name_of_column == "":
+                return self.primary_keys[name_of_table]
+            else:
+                for pk in self.primary_keys[name_of_table]:
+                    if pk.column_name == name_of_column:
+                        return pk
         else:
             print("No attribute named:", tuple_name)
             exit()
