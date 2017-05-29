@@ -241,14 +241,18 @@ class HH_Database(object):
         solution_pk_list = self.get_namedtuple("primary_keys", table_name)
         
         for solution_pk in solution_pk_list:
-            print("solution:", solution_pk)
+            #print("solution:", solution_pk)
             compare_pk = other.get_namedtuple("primary_keys", table_name, solution_pk.column_name)
-            print("compare:",compare_pk)
+            if compare_pk == None:
+                    print("  -Mismatch detected in primary keys!!!")
+                    print("   -solution's " + field + " value is   :", getattr(solution_pk, field))
+                    print("   -cadet's is missing this primary key!!!")
+                    continue
+            #print("compare:",compare_pk)
             for field in solution_pk._fields:
                 if field in ignore_fields:
-                    #differnt database files are expected to have different names.
                     continue
-                if getattr(solution_pk, field) != getattr(compare_pk, field):
+                elif getattr(solution_pk, field) != getattr(compare_pk, field):
                     print(" -Mismatch detected in primary keys!!!")
                     print("   -solution's " + field + " value is   :", getattr(solution_pk, field))
                     print("   -cadet's " + field + " value is :", getattr(compare_pk, field))
@@ -316,11 +320,11 @@ class HH_Database(object):
         An accessor method for pulling the desired table, statistic, column, or
           query from the attributes of this object.  Uses the table name or the 
           name of the column to select the desired attribute, and is usually used
-          in the comparison of attributes from the "other" table.
+          in the retreival for comparison of attributes from the "other" database.
         
         Args:
         - tuple_name (str): Either "tables", "statistics", "columns", "primary_keys",
-          or "foreign keys".  Anything else will cause the program to exit.
+          or "foreign_keys".  Anything else will cause the program to exit.
         - name_of_table (str): the name of the table whos attribute you'd like to retrieve.
         - name_of_column (str): Used when retrieving columns or keys.  Failing to 
             provide this when asking for columns or keys gets you the list of all
@@ -348,7 +352,7 @@ class HH_Database(object):
             - If no name_of_column is provided as an argument, returns
                 a list of table_statistic namedtuples with all the 
                 statistics associated with the foreign keys of the desired table.
-            - If name_of_column is provided as an argument, returns the column 
+            - If name_of_column is provided as an argument, returns the table_statistic 
                 namedtuple for the desired table and the desired column.
         """
         if tuple_name == "tables":
