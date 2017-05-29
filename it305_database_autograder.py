@@ -387,8 +387,12 @@ class HH_Database(object):
         for solution_col in solution_col_list:
         
             compare_col = other.get_namedtuple("columns", table_name, solution_col.column_name)
+            #print("solution:")
+            #print(solution_col)
+            #print("cadet:")
             #print(compare_col)
         
+            already_printed_column_name = False
             for field in solution_col._fields:
                 if field in fields_to_ignore:
                     continue
@@ -396,9 +400,11 @@ class HH_Database(object):
                     if mismatch_found == False:
                         mismatch_found = True
                         print("  -Mismatched columns detected!")
+                    if not already_printed_column_name:
                         print("    -" + solution_col.column_name, "does not match")
-                    print("      -self's " + field + " value is   :", getattr(solution_col, field))
-                    print("      -others's " + field + " value is :", getattr(compare_col, field))
+                        already_printed_column_name = True
+                    print("      -solution's " + field + " value is   :", getattr(solution_col, field))
+                    print("      -cadet's " + field + " value is :", getattr(compare_col, field))
                     
                 else:
                     pass
