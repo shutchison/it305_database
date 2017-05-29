@@ -5,7 +5,8 @@
 import pypyodbc
 from pprint import pprint
 from named_tuples_definitions import *
-import time
+from operator import itemgetter
+
 
 # The Hutchison-Hussey (in that order) database class definition.
 class HH_Database(object):
@@ -110,10 +111,13 @@ class HH_Database(object):
                         else:
                             self.primary_keys[t.name].append(stat)
                     elif stat.non_unique == 1 or stat.table_name in stat.index_name:
-                        if t.name not in self.foreign_keys:
-                            self.foreign_keys[t.name] = [stat]
-                        else:
-                            self.foreign_keys[t.name].append(stat)
+                        #I have serious doubts about this logic correctly
+                        #adding the right foreign keys...
+                        if stat.table_name in stat.index_name:
+                            if t.name not in self.foreign_keys:
+                                self.foreign_keys[t.name] = [stat]
+                            else:
+                                self.foreign_keys[t.name].append(stat)
                         
                 for col in list(self.database_cursor.columns(t.name)):
                     col = column(*col)
@@ -125,6 +129,37 @@ class HH_Database(object):
             elif t.type == "VIEW":
                 self.sql_queries.append(t)
 
+        self._remove_extraneous_fk_stats()
+        
+    def _remove_extraneous_fk_stats(self):
+        """
+        Retains only foreign keys whose index_name is a combination of two table
+        names.  Discards the rest.
+        """
+        table_names = [t.name for t in self.tables]
+        
+        #Generate all possible combinations of two table names
+        table_name_combinations = []
+        for i1, t1 in enumerate(table_names):
+            for i2, t2 in enumerate(table_names):
+                if i1 == i2:
+                    continue
+                table_name_combinations.append(t1 + t2)
+    
+        fks_to_remove = []
+        
+        for table_name_dict_key, fk_stats in self.foreign_keys.items():
+            for fk_index, fk in enumerate(fk_stats):
+                if fk.index_name not in table_name_combinations:
+                    fks_to_remove.append((table_name_dict_key, fk_index))
+        
+        #Sort so we remove from the end of the list and don't mess up our
+        # indexes for later removals
+        fks_to_remove = sorted(fks_to_remove, key=itemgetter(1), reverse=True)
+
+        for table_name_dict_key, index_to_remove in fks_to_remove:
+            self.foreign_keys[table_name_dict_key].pop(index_to_remove)
+        
     def compare_with_other(self, other, output_file_name = "compare_results.txt"):
         """
         Method called by the user to compare two databases to one another.
@@ -151,8 +186,8 @@ class HH_Database(object):
                     self.compare_tables(other, table_to_grade)
                     self.compare_statistics(other, table_to_grade) #may be unneccessary now
                     self.compare_primary_keys(other, table_to_grade)
+                    self.compare_foreign_keys(other, table_to_grade) #not implemented
                     self.compare_columns(other, table_to_grade)
-                    #self.compare_foreign_keys(other, table_to_grade) #not implemented
                     self.compare_sql_queries(other)
                     print()
 
@@ -221,10 +256,6 @@ class HH_Database(object):
             print("  -Statistic fields all check out.  Hooah!")
                     
     def compare_primary_keys(self, other, table_name):
-        ##############################
-        #NOT CURRENTLY WORKING  :'(
-        ##############################
-        
         """
         Compares the primary keys from this database object with an 
         identically named database from the "other" variable.
@@ -239,14 +270,23 @@ class HH_Database(object):
         ignore_fields = ['table_catalog']
         
         solution_pk_list = self.get_namedtuple("primary_keys", table_name)
+        cadet_pk_list = other.get_namedtuple("primary_keys", table_name)
+        
+        #print("Solution is:")
+        #pprint(solution_pk_list)
+        #print()
+        #print("cadet is:")
+        #pprint(cadet_pk_list)
+        #print()
         
         for solution_pk in solution_pk_list:
             #print("solution:", solution_pk)
             compare_pk = other.get_namedtuple("primary_keys", table_name, solution_pk.column_name)
             if compare_pk == None:
                     print("  -Mismatch detected in primary keys!!!")
-                    print("   -solution's " + field + " value is   :", getattr(solution_pk, field))
+                    print("   -solution's primary key is: " + solution_pk.column_name)
                     print("   -cadet's is missing this primary key!!!")
+                    mismatch_found = True
                     continue
             #print("compare:",compare_pk)
             for field in solution_pk._fields:
@@ -262,7 +302,69 @@ class HH_Database(object):
                 #print(field, " matches")
         if not mismatch_found:
             print("  -Primary Key fields all check out.  Hooah!") 
+            
+    def compare_foreign_keys(self, other, table_name):
+        """
+        Compares the primary keys from this database object with an 
+        identically named database from the "other" variable.
+            
+        Args:
+        - other (HH_Database object): another HH_Database object whose 
+            identically named table will be compared.
+        - table_name (str): The name of the table to be compared.
+        """
+        mismatch_found = False
+
+        ignore_fields = ['table_catalog']
         
+        solution_fk_list = self.get_namedtuple("foreign_keys", table_name)
+        cadet_fk_list = other.get_namedtuple("foreign_keys", table_name)
+        
+        #print("Solution is:")
+        #pprint(solution_fk_list)
+        #print()
+        #print("cadet is:")
+        #pprint(cadet_fk_list)
+        #print()
+        
+        if solution_fk_list == None:
+            print("  -No foreign keys found for the", table_name, "table")
+            return
+        
+        
+        if cadet_fk_list == None:
+            print("  -Mismatch detected in foreign keys!!!")
+            print("   -solution's foreign key is: " + solution_fk.column_name)
+            print("   -cadet's is missing this foreign key!!!")
+            
+            mismatch_found = True
+            return
+        
+        
+        for solution_fk in solution_fk_list:
+            #print("solution:", solution_pk)
+            compare_fk = other.get_namedtuple("foreign_keys", table_name, solution_fk.column_name)
+            if compare_fk == None:
+                    print("  -Mismatch detected in foreign keys!!!")
+                    print("   -solution's foreign key is: " + solution_fk.column_name)
+                    print("   -cadet's is missing this foreign key!!!")
+                    mismatch_found = True
+                    continue
+            #print("compare:",compare_pk)
+            for field in solution_fk._fields:
+                if field in ignore_fields:
+                    continue
+                elif getattr(solution_fk, field) != getattr(compare_fk, field):
+                    print("  -Mismatch detected in foreign keys!!!")
+                    print("    -solution's " + field + " value is   :", getattr(solution_fk, field))
+                    print("    -cadet's " + field + " value is :", getattr(compare_fk, field))
+                    mismatch_found = True
+                else:
+                    pass
+                #print(field, " matches")
+        if not mismatch_found:
+            print("  -Foreign Key fields all check out.  Hooah!")        
+            
     def compare_columns(self, other, table_name):
         """
         Compares all the columns from a table from this database object with an 
@@ -370,11 +472,18 @@ class HH_Database(object):
                         return column
         elif tuple_name == "primary_keys":
             if name_of_column == "":
-                return self.primary_keys[name_of_table]
+                return self.primary_keys.get(name_of_table, None)
             else:
                 for pk in self.primary_keys[name_of_table]:
                     if pk.column_name == name_of_column:
                         return pk
+        elif tuple_name == "foreign_keys":
+            if name_of_column == "":
+                return self.foreign_keys.get(name_of_table, None)
+            else:
+                for fk in self.foreign_keys[name_of_table]:
+                    if fk.column_name == name_of_column:
+                        return fk
         else:
             print("No attribute named:", tuple_name)
             exit()
@@ -450,7 +559,7 @@ if __name__ == "__main__":
     solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")
     cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
 
-    # With an overloaded str function, you can print the database!
+    #With an overloaded str function, you can print the database!
     print("==="*30)
     print("Solution database is:")
     print("==="*30)
@@ -463,3 +572,8 @@ if __name__ == "__main__":
 
     solution_database_obj.set_tables_to_grade(['Cadet', 'CadetInTest', 'FitnessTests', 'Profile'])
     solution_database_obj.compare_with_other(cadet_database_obj)
+    
+
+
+
+    
