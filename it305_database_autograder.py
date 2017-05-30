@@ -78,7 +78,7 @@ class HH_Database(object):
         
         self.get_table_info()
         
-        self.connection.close()
+        #self.connection.close()
         
     def set_tables_to_grade(self, tables_list):
         """
@@ -188,9 +188,13 @@ class HH_Database(object):
                     self.compare_primary_keys(other, table_to_grade)
                     self.compare_foreign_keys(other, table_to_grade) #not implemented
                     self.compare_columns(other, table_to_grade)
-                    self.compare_sql_queries(other)
                     print()
-
+                print("-"*30)
+                print("Checking SQL queries")
+                print("-"*30)    
+                self.compare_sql_queries(other)
+                print()
+                
     def compare_tables(self, other, table_name):
         """
         Compares a table from this database object with an identically named database
@@ -203,13 +207,15 @@ class HH_Database(object):
         """
         mismatch_found = False
 
+        fields_to_ignore = ['catalog']
+        
         solution_table = self.get_namedtuple("tables", table_name)
         compare_table = other.get_namedtuple("tables", table_name)
         #print(solution_table)
         #print(compare_table)
         
         for field in solution_table._fields:
-            if field == "catalog":
+            if field in fields_to_ignore:
                 #differnt database files are expected to have different names.
                 continue
             if getattr(solution_table, field) != getattr(compare_table, field):
@@ -421,7 +427,49 @@ class HH_Database(object):
         - other (HH_Database object): another HH_Database object whose 
             identically named sql queries will be compared.
         """
-        print("************compare_sql_queries not implemented yet***********")
+        mismatch_found = False
+        
+        compare_query = None
+        for sol_query in self.sql_queries:
+            #find matching sql_query in other
+            for other_query in other.sql_queries:
+                if other_query.name == sol_query.name:
+                    compare_query = other_query
+            
+            #print("solution")
+            #print(sol_query)
+            #print("cadet")
+            #print(compare_query)
+            
+            if compare_query == None:
+                print("  -Cadet database does not have a query named:", sol_query.name)
+                mismatch_found = True
+            else:
+                sol_results = self.database_cursor.execute("SELECT * FROM " + sol_query.name)
+                compare_results = other.database_cursor.execute("SELECT * FROM " + other_query.name)
+                
+                sol_set = set(list(sol_results))
+                compare_set = set(list(compare_results))
+                
+                #print(sol_set)
+                #print(compare_set)
+                
+                if sol_set.union(compare_set) != sol_set:
+                    print("  -SQL query results for", sol_query.name, "do NOT match!")
+                    mismatch_found - True
+                    print("    -Solution's query results are:")
+                    print("     -", list(sol_results))
+                    print("    -Cadet's query results are:")
+                    print("     -", list(compare_results))
+                    mismatch_found = True
+                    print()
+                else:
+                    print("  -" + sol_query.name + "'s results match!")
+                
+        if not mismatch_found:
+            print("  -SQL queries all check out.  Hooah!")
+                
+                
 
     def get_namedtuple(self, tuple_name, name_of_table, name_of_column=""):
         """
