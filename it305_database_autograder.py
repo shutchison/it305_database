@@ -186,7 +186,7 @@ class HH_Database(object):
                     self.compare_tables(other, table_to_grade)
                     self.compare_statistics(other, table_to_grade) #may be unneccessary now
                     self.compare_primary_keys(other, table_to_grade)
-                    self.compare_foreign_keys(other, table_to_grade) #not implemented
+                    self.compare_foreign_keys(other, table_to_grade)
                     self.compare_columns(other, table_to_grade)
                     print()
                 print("-"*30)
@@ -216,7 +216,6 @@ class HH_Database(object):
         
         for field in solution_table._fields:
             if field in fields_to_ignore:
-                #differnt database files are expected to have different names.
                 continue
             if getattr(solution_table, field) != getattr(compare_table, field):
                 print(" -Mismatch detected in tables!!!")
@@ -502,12 +501,14 @@ class HH_Database(object):
             - If no name_of_column is provided as an argument, returns
                 a list of table_statistic namedtuples with all the 
                 statistics associated with the primary keys of the desired table.
-            - If name_of_column is provided as an argument, returns the column 
-                namedtuple for the desired table and the desired column.
+            - If name_of_column is provided as an argument, returns the table_statistic 
+                namedtuple for the desired primary key and the desired column, or None
+                if no primary keys exist.
         - if the tuple_name is "foreign_keys": 
             - If no name_of_column is provided as an argument, returns
                 a list of table_statistic namedtuples with all the 
-                statistics associated with the foreign keys of the desired table.
+                statistics associated with the foreign keys of the desired table,
+                or None if no foreign keys exist.
             - If name_of_column is provided as an argument, returns the table_statistic 
                 namedtuple for the desired table and the desired column.
         """
