@@ -1,0 +1,91 @@
+Score for the database is 64.952380952381 out of 100
+**********TABLES**********
+010  Run == 14.2857142857143 points
+011  Race == 16 points
+001  CadetRunsRace == 10 points
+**********QUERIES**********
+#BAD SQL# 000  LongestWeeklyRun == 18 points
+#BAD SQL# 000  RaceTypeCount == 6.66666666666667 points
+
+
+**********TABLES**********
+
+Run
+  -Fields DO NOT Match
+     S: cadetID6  distance  runDate  runID  runType20  
+     C: cadetID255  distance  runDate  runID  runType255  
+     -cadetID sizes DO NOT match
+     -runType sizes DO NOT match
+  -PKs Match
+  -Relationships DO NOT Match
+     S: Race-->CadetRunsRace
+
+     C: Run-->Cadet
+
+
+Race
+  -Fields DO NOT Match
+     S: raceID  raceName30  raceType15  
+     C: raceID  raceName255  raceType255  
+     -raceName sizes DO NOT match
+     -raceType sizes DO NOT match
+  -PKs Match
+  -Relationships Match
+
+CadetRunsRace
+  -Fields DO NOT Match
+     S: cadetID6  dateRaced  placed  raceID  
+     C: cadetID6  dateRaced255  placed255  raceID  
+     -placed types DO NOT match 
+     -dateRaced types DO NOT match 
+  -PKs DO NOT Match
+     S: cadetIDraceID
+     C: cadetID
+  -Relationships Match
+
+**********QUERIES**********
+
+LongestWeeklyRun ####  BAD SQL  #### 
+ *--* No Easy Match - compare SQL:
+
+
+  S: SELECT Cadet.cadetLastName, Run.runType, Run.distance, Run.runDate
+  C: SELECT Cadet.cadetLastName, Run.runType, Run.distance, Run.runDate
+
+
+  S: FROM Cadet INNER JOIN Run ON Cadet.cadetID = Run.cadetID
+  C: FROM Run INNER JOIN (Race INNER JOIN Cadet ON Race.raceID = Cadet.cadetID) ON Run.runID = Cadet.cadetID
+
+  S: WHERE (((Run.runDate) Between #4/17/2017# And #4/23/2017#))
+ORDER BY Run.runType, Run.distance DESC;
+  C: WHERE (((Run.runDate) Between #4/17/2017# And #4/23/2017#))
+ORDER BY Run.runType, Run.distance DESC;
+
+-----------------RESULTS-----------------
+---------------END RESULTS---------------
+
+RaceTypeCount ####  BAD SQL  #### 
+ *--* No Easy Match - compare SQL:
+    --field: Count *NF
+    --field: ID *NF
+    --sorting: Count *NF
+    --sorting: ID *NF
+
+
+  S: SELECT Race.raceType, Count(Race.raceID) AS CountOfraceID
+  C: SELECT Race.raceType, Race.raceName
+
+
+  S: FROM Race
+GROUP BY Race.raceType
+ORDER BY Count(Race.raceID) DESC;
+  C: FROM Run INNER JOIN (Race INNER JOIN Cadet ON Race.raceID = Cadet.cadetID) ON Run.runID = Cadet.cadetID
+ORDER BY Race.raceName DESC;
+
+  S: WHERE NOT FOUND
+  C: WHERE NOT FOUND
+
+-----------------RESULTS-----------------
+---------------END RESULTS---------------
+
+

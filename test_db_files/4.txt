@@ -1,0 +1,60 @@
+Score for the database is 44 out of 100
+**********TABLES**********
+*NF  Run == 0 points
+010  Race == 12 points
+*NF  CadetRunsRace == 0 points
+**********QUERIES**********
+#BAD SQL# 000  LongestWeeklyRun == 12 points
+01-  RaceTypeCount == 20 points
+
+
+**********TABLES**********
+
+Run
+ *0* NOT FOUND IN CADET FILE
+
+Race
+  -Fields DO NOT Match
+     S: raceID  raceName30  raceType15  
+     C: raceID  raceName255  raceType255  
+     -raceName sizes DO NOT match
+     -raceType sizes DO NOT match
+  -PKs Match
+  -Relationships DO NOT Match
+     S: Race-->CadetRunsRace
+
+     C: CadetsRunRace-->Race
+
+
+CadetRunsRace
+ *0* NOT FOUND IN CADET FILE
+
+**********QUERIES**********
+
+LongestWeeklyRun ####  BAD SQL  #### 
+ *--* No Easy Match - compare SQL:
+    --criteria: runDate *NF
+    --criteria: Between *NF
+    --criteria: 4/17/2017 *NF
+    --criteria: 4/23/2017 *NF
+
+
+  S: SELECT Cadet.cadetLastName, Run.runType, Run.distance, Run.runDate
+  C: SELECT Cadet.cadetLastName, Run_OLD.runType, Run_OLD.distance, Run_OLD.runDate
+
+
+  S: FROM Cadet INNER JOIN Run ON Cadet.cadetID = Run.cadetID
+  C: FROM Run_OLD INNER JOIN Cadet ON Run_OLD.cadetID = Cadet.cadetID
+ORDER BY Run_OLD.runType, Run_OLD.distance DESC;
+
+  S: WHERE (((Run.runDate) Between #4/17/2017# And #4/23/2017#))
+ORDER BY Run.runType, Run.distance DESC;
+  C: WHERE NOT FOUND
+
+-----------------RESULTS-----------------
+---------------END RESULTS---------------
+
+RaceTypeCount ** Output Match
+---------------------------
+
+

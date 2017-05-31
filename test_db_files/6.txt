@@ -1,0 +1,38 @@
+Score for the database is 96.6666666666667 out of 100
+**********TABLES**********
+111  Run == 20 points
+111  Race == 20 points
+101  CadetRunsRace == 16.6666666666667 points
+**********QUERIES**********
+01-  LongestWeeklyRun == 20 points
+01-  RaceTypeCount == 20 points
+
+
+**********TABLES**********
+
+Run
+  -Fields Match
+  -PKs Match
+  -Relationships Match
+
+Race
+  -Fields Match
+  -PKs Match
+  -Relationships Match
+
+CadetRunsRace
+  -Fields Match
+  -PKs DO NOT Match
+     S: cadetIDraceID
+     C: 
+  -Relationships Match
+
+**********QUERIES**********
+
+LongestWeeklyRun ** Output Match
+---------------------------
+
+RaceTypeCount ** Output Match
+---------------------------
+
+

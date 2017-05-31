@@ -65,8 +65,7 @@ class HH_Database(object):
         connect_string = r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};" + "Dbq={0};".format(self.path_to_database) 
         self.connection = pypyodbc.connect(connect_string)
         self.database_cursor = self.connection.cursor()
-        
-        
+
         self.tables = []
         self.statistics = {}
         self.columns = {}
@@ -103,14 +102,17 @@ class HH_Database(object):
 
                 for stat in list(self.database_cursor.statistics(t.name)):
                     stat = table_statistic(*stat)
+                    # problem is still here with differentiating relationships...
                     if stat.non_unique == None:
                         self.statistics[t.name] = stat
-                    elif stat.non_unique == 0 and stat.table_name not in stat.index_name:
+                    #elif stat.non_unique == 0 and stat.table_name not in stat.index_name:
+                    elif stat.index_name == "PrimaryKey":
                         if t.name not in self.primary_keys:
                             self.primary_keys[t.name] = [stat]
                         else:
                             self.primary_keys[t.name].append(stat)
-                    elif stat.non_unique == 1 or stat.table_name in stat.index_name:
+                    #elif stat.table_name in stat.index_name:
+                    else:
                         #I have serious doubts about this logic correctly
                         #adding the right foreign keys...
                         if stat.table_name in stat.index_name:
@@ -129,7 +131,7 @@ class HH_Database(object):
             elif t.type == "VIEW":
                 self.sql_queries.append(t)
 
-        self._remove_extraneous_fk_stats()
+        #self._remove_extraneous_fk_stats()
         
     def _remove_extraneous_fk_stats(self):
         """
@@ -184,7 +186,8 @@ class HH_Database(object):
                     print("Checking table:", table_to_grade)
                     print("-"*30)
                     self.compare_tables(other, table_to_grade)
-                    self.compare_statistics(other, table_to_grade) #may be unneccessary now
+                    #I'm not sure this statistics comparisson is value-added.
+                    self.compare_statistics(other, table_to_grade) 
                     self.compare_primary_keys(other, table_to_grade)
                     self.compare_foreign_keys(other, table_to_grade)
                     self.compare_columns(other, table_to_grade)
@@ -213,6 +216,12 @@ class HH_Database(object):
         compare_table = other.get_namedtuple("tables", table_name)
         #print(solution_table)
         #print(compare_table)
+        
+        if compare_table == None:
+            print("  -cadet is missing this table!  Here are the cadet's tables:")
+            for table in other.tables:
+                print("    -" + table.name)
+            return
         
         for field in solution_table._fields:
             if field in fields_to_ignore:
@@ -277,6 +286,10 @@ class HH_Database(object):
         solution_pk_list = self.get_namedtuple("primary_keys", table_name)
         cadet_pk_list = other.get_namedtuple("primary_keys", table_name)
         
+        if solution_pk_list == None:
+            print("  -" + table_name + " does not have any primary keys.")
+            return
+        
         #print("Solution is:")
         #pprint(solution_pk_list)
         #print()
@@ -290,7 +303,18 @@ class HH_Database(object):
             if compare_pk == None:
                     print("  -Mismatch detected in primary keys!!!")
                     print("   -solution's primary key is: " + solution_pk.column_name)
-                    print("   -cadet's is missing this primary key!!!")
+                    
+                    compares_actual_pk = other.get_namedtuple("primary_keys", table_name)
+                    if compares_actual_pk == None:
+                        print("    -cadet's has no primary key for this table!")
+                    else:                    
+                        for compare_pk_dict_key, compare_pks in other.primary_keys.items():
+                            if compare_pk_dict_key == table_name:
+                                print("   -cadet's primary keys are: ")
+                                for compare_pk in compare_pks:
+                                    print("      -" + compare_pk.column_name)
+                            
+
                     mismatch_found = True
                     continue
             #print("compare:",compare_pk)
@@ -331,7 +355,7 @@ class HH_Database(object):
         #print("cadet is:")
         #pprint(cadet_fk_list)
         #print()
-        
+              
         if solution_fk_list == None:
             print("  -No foreign keys found for the", table_name, "table")
             return
@@ -339,9 +363,9 @@ class HH_Database(object):
         
         if cadet_fk_list == None:
             print("  -Mismatch detected in foreign keys!!!")
-            print("   -solution's foreign key is: " + solution_fk.column_name)
+            print("   -solution's foreign keys are: ")
+            pprint(solution_fk_list)
             print("   -cadet's is missing this foreign key!!!")
-            
             mismatch_found = True
             return
         
@@ -382,9 +406,22 @@ class HH_Database(object):
         """
         mismatch_found = False
 
-        #I don't know which fields you don't care about, but put them in 
-        #this list of strings
-        fields_to_ignore = ["table_catalog"]
+        fields_to_ignore = ["table_catalog",
+                            "table_schema",
+                            "table_name",
+                            "data_type",
+                            "buffer_length",
+                            "decimal_digits",
+                            "num_prec_radix",
+                            "nullable",
+                            "remarks",
+                            "column_def",
+                            "sql_data_type",
+                            "sql_datetime_sub",
+                            "char_octet_length",
+                            "ordinal_position",
+                            "is_nullable",
+                            "unknown_thing_not_documented"]
         
         solution_col_list = self.get_namedtuple("columns", table_name)
         #pprint(solution_col_list)
@@ -396,7 +433,14 @@ class HH_Database(object):
             #print(solution_col)
             #print("cadet:")
             #print(compare_col)
-        
+            
+            if compare_col == None:
+                print("  -solution has column", solution_col.column_name)
+                print("  -Cadet is missing this column!")
+                mismatch_found = True
+                continue
+            
+            
             already_printed_column_name = False
             for field in solution_col._fields:
                 if field in fields_to_ignore:
@@ -445,26 +489,30 @@ class HH_Database(object):
                 mismatch_found = True
             else:
                 sol_results = self.database_cursor.execute("SELECT * FROM " + sol_query.name)
-                compare_results = other.database_cursor.execute("SELECT * FROM " + other_query.name)
-                
-                sol_set = set(list(sol_results))
-                compare_set = set(list(compare_results))
-                
-                #print(sol_set)
-                #print(compare_set)
-                
-                if sol_set.union(compare_set) != sol_set:
-                    print("  -SQL query results for", sol_query.name, "do NOT match!")
-                    mismatch_found - True
-                    print("    -Solution's query results are:")
-                    print("     -", list(sol_results))
-                    print("    -Cadet's query results are:")
-                    print("     -", list(compare_results))
+                try:
+                    compare_results = other.database_cursor.execute("SELECT * FROM " + other_query.name)
+                    
+                    sol_set = set(list(sol_results))
+                    compare_set = set(list(compare_results))
+                    
+                    #print(sol_set)
+                    #print(compare_set)
+                    
+                    if sol_set.union(compare_set) != sol_set:
+                        print("  -SQL query results for", sol_query.name, "do NOT match!")
+                        mismatch_found - True
+                        print("    -Solution's query results are:")
+                        print("     -", list(sol_results))
+                        print("    -Cadet's query results are:")
+                        print("     -", list(compare_results))
+                        mismatch_found = True
+                        print()
+                    else:
+                        print("  -" + sol_query.name + "'s results match!")
+                except Exception as e:
+                    print("  -cadet's sql query " + sol_query.name + " had the following error:")
+                    print(e)
                     mismatch_found = True
-                    print()
-                else:
-                    print("  -" + sol_query.name + "'s results match!")
-                
         if not mismatch_found:
             print("  -SQL queries all check out.  Hooah!")
                 
@@ -520,16 +568,22 @@ class HH_Database(object):
             return self.statistics[name_of_table]
         elif tuple_name == "columns":
             if name_of_column == "":
-                return self.columns[name_of_table]
+                return self.columns.get(name_of_table, None)
             else:
-                for column in self.columns[name_of_table]:
+                columns = self.columns.get(name_of_table, None)
+                if columns == None:
+                    return None
+                for column in columns:
                     if column.column_name == name_of_column:
                         return column
         elif tuple_name == "primary_keys":
             if name_of_column == "":
                 return self.primary_keys.get(name_of_table, None)
             else:
-                for pk in self.primary_keys[name_of_table]:
+                pk_list = self.primary_keys.get(name_of_table, None)
+                if pk_list == None:
+                    return None
+                for pk in pk_list:
                     if pk.column_name == name_of_column:
                         return pk
         elif tuple_name == "foreign_keys":
@@ -611,9 +665,11 @@ class HH_Database(object):
         return return_string
         
 if __name__ == "__main__":
-    solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")
-    cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
-
+    #solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")
+    solution_database_obj = HH_Database(r".\test_db_files\Solution.ACCDB")
+    #cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
+    cadet_database_obj = HH_Database(r".\test_db_files\1.ACCDB")
+    
     #With an overloaded str function, you can print the database!
     print("==="*30)
     print("Solution database is:")
@@ -625,7 +681,8 @@ if __name__ == "__main__":
     print(cadet_database_obj)
     print("==="*30)
 
-    solution_database_obj.set_tables_to_grade(['Cadet', 'CadetInTest', 'FitnessTests', 'Profile'])
+    #solution_database_obj.set_tables_to_grade(['Profile', 'FitnessTests', 'CadetInTest'])
+    solution_database_obj.set_tables_to_grade(['Run', 'Race', 'CadetRunsRace'])
     solution_database_obj.compare_with_other(cadet_database_obj)
     
 

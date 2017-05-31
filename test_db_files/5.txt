@@ -1,0 +1,64 @@
+Score for the database is 72.8571428571429 out of 100
+**********TABLES**********
+000  Run == 12.8571428571429 points
+000  Race == 10 points
+000  CadetRunsRace == 10 points
+**********QUERIES**********
+01-  LongestWeeklyRun == 20 points
+01-  RaceTypeCount == 20 points
+
+
+**********TABLES**********
+
+Run
+  -Fields DO NOT Match
+     S: cadetID6  distance  runDate  runID  runType20  
+     C: cadetID6  distance  runDate  RunID  runType20  
+     -runID case sensitive mismatch RunID
+  -PKs DO NOT Match
+     S: runID
+     C: RunID
+  -Relationships DO NOT Match
+     S: Race-->CadetRunsRace
+
+     C: CadetRunsRace-->Race
+
+
+Race
+  -Fields DO NOT Match
+     S: raceID  raceName30  raceType15  
+     C: RaceID  raceName30  raceType15  
+     -raceID case sensitive mismatch RaceID
+  -PKs DO NOT Match
+     S: raceID
+     C: RaceID
+  -Relationships DO NOT Match
+     S: Race-->CadetRunsRace
+
+     C: CadetRunsRace-->Race
+
+
+CadetRunsRace
+  -Fields DO NOT Match
+     S: cadetID6  dateRaced  placed  raceID  
+     C: CadetID6  dateRaced  placed  RaceID  
+     -cadetID case sensitive mismatch CadetID
+     -raceID case sensitive mismatch RaceID
+  -PKs DO NOT Match
+     S: cadetIDraceID
+     C: RaceID
+  -Relationships DO NOT Match
+     S: Race-->CadetRunsRace
+
+     C: CadetRunsRace-->Race
+
+
+**********QUERIES**********
+
+LongestWeeklyRun ** Output Match
+---------------------------
+
+RaceTypeCount ** Output Match
+---------------------------
+
+
