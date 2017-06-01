@@ -110,13 +110,13 @@ class HH_Database(object):
                             self.primary_keys[t.name] = [stat]
                         else:
                             self.primary_keys[t.name].append(stat)
-                    #elif stat.table_name in stat.index_name:
-                    else:
+                    elif stat.table_name in stat.index_name:
                         if t.name not in self.foreign_keys:
                             self.foreign_keys[t.name] = [stat]
                         else:
                             self.foreign_keys[t.name].append(stat)
-                        
+                    #else:
+                    #    print("Stat ignored:", stat)
                 for col in list(self.database_cursor.columns(t.name)):
                     col = column(*col)
                     if t.name not in self.columns:
@@ -126,38 +126,38 @@ class HH_Database(object):
                         
             elif t.type == "VIEW":
                 self.sql_queries.append(t)
-
-        #self._remove_extraneous_fk_stats()
+                
+        self._remove_extraneous_fk_stats()
         
-    def _remove_extraneous_fk_stats(self):
-        """
-        Retains only foreign keys whose index_name is a combination of two table
-        names.  Discards the rest.
-        """
-        table_names = [t.name for t in self.tables]
+    def _remove_extraneous_fk_stats(self): 
+        """ 
+        Retains only foreign keys whose index_name is a combination of two table 
+        names.  Discards the rest. 
+        """ 
+        table_names = [t.name for t in self.tables] 
         
-        #Generate all possible combinations of two table names
-        table_name_combinations = []
-        for i1, t1 in enumerate(table_names):
-            for i2, t2 in enumerate(table_names):
-                if i1 == i2:
-                    continue
-                table_name_combinations.append(t1 + t2)
+        #Generate all possible combinations of two table names 
+        table_name_combinations = [] 
+        for i1, t1 in enumerate(table_names): 
+            for i2, t2 in enumerate(table_names): 
+                if i1 == i2: 
+                    continue 
+                table_name_combinations.append(t1 + t2) 
     
-        fks_to_remove = []
+        fks_to_remove = [] 
         
-        for table_name_dict_key, fk_stats in self.foreign_keys.items():
-            for fk_index, fk in enumerate(fk_stats):
-                if fk.index_name not in table_name_combinations:
-                    fks_to_remove.append((table_name_dict_key, fk_index))
+        for table_name_dict_key, fk_stats in self.foreign_keys.items(): 
+            for fk_index, fk in enumerate(fk_stats): 
+                if fk.index_name not in table_name_combinations: 
+                    fks_to_remove.append((table_name_dict_key, fk_index)) 
         
-        #Sort so we remove from the end of the list and don't mess up our
-        # indexes for later removals
-        fks_to_remove = sorted(fks_to_remove, key=itemgetter(1), reverse=True)
+        #Sort so we remove from the end of the list and don't mess up our 
+        # indexes for later removals 
+        fks_to_remove = sorted(fks_to_remove, key=itemgetter(1), reverse=True) 
+        
+        for table_name_dict_key, index_to_remove in fks_to_remove: 
+            self.foreign_keys[table_name_dict_key].pop(index_to_remove) 
 
-        for table_name_dict_key, index_to_remove in fks_to_remove:
-            self.foreign_keys[table_name_dict_key].pop(index_to_remove)
-        
     def compare_with_other(self, other, output_file_name = "compare_results.txt"):
         """
         Method called by the user to compare two databases to one another.
@@ -177,16 +177,15 @@ class HH_Database(object):
         else:
             with open(output_file_name, "wt") as out_file:
                 # maybe pass our out_file to these methods so they can write to the file themselves?
+                print
                 for table_to_grade in self.tables_to_grade:
                     print("-"*30)
                     print("Checking table:", table_to_grade)
                     print("-"*30)
                     self.compare_tables(other, table_to_grade)
-                    #I'm not sure this statistics comparisson is value-added.
-                    self.compare_statistics(other, table_to_grade) 
+                    self.compare_columns(other, table_to_grade) 
                     self.compare_primary_keys(other, table_to_grade)
                     self.compare_foreign_keys(other, table_to_grade)
-                    self.compare_columns(other, table_to_grade)
                     print()
                 print("-"*30)
                 print("Checking SQL queries")
@@ -231,7 +230,7 @@ class HH_Database(object):
                 pass
                 #print(field, " matches")
         if not mismatch_found:
-            print("  -Table fields all check out.  Hooah!")  
+            print("  -Fields for this table all check out.  Hooah!")  
 
     def compare_statistics(self, other, table_name):
         """
@@ -248,7 +247,11 @@ class HH_Database(object):
         compare_stat = other.get_namedtuple("statistics", table_name)
         #print(solution_stat)
         #print(compare_stat)
-
+        if compare_stat == None:
+            print("  -cadet is missing this table!  Here are the cadet's tables:")
+            for table in other.tables:
+                print("    -" + table.name)
+            return
         ignore_fields = ['table_catalog']
         
         for field in solution_stat._fields:
@@ -320,7 +323,7 @@ class HH_Database(object):
                         
 
                 mismatch_found = True
-                continue
+                break
             #print("compare:",compare_pk)
             for field in solution_pk._fields:
                 if field in ignore_fields:
@@ -361,15 +364,22 @@ class HH_Database(object):
         #print()
               
         if solution_fk_list == None:
-            print("  -No foreign keys found for the", table_name, "table")
+            if cadet_fk_list == None:
+                print("  -Foreign Key fields all check out (Both have none). Hooah!")
+            else:
+                print("  -Solution has no foreign keys found for the", table_name, "table")
+                for fk in cadet_fk_list:
+                    relationship_string = fk.index_name.split(fk.table_name)[0] + "-->" + fk.table_name
+                    print("      -" + relationship_string + " : " + fk.column_name)
             return
-        
-        
+
         if cadet_fk_list == None:
             print("  -Mismatch detected in foreign keys!!!")
-            print("   -solution's foreign keys are: ")
-            pprint(solution_fk_list)
-            print("   -cadet's is missing this foreign key!!!")
+            print("    -solution's foreign keys are: ")
+            for fk in solution_fk_list:
+                relationship_string = fk.index_name.split(fk.table_name)[0] + "-->" + fk.table_name
+                print("      -" + relationship_string + " : " + fk.column_name)
+            print("    -cadet's has no foreign keys for this table!!!")
             mismatch_found = True
             return
         
@@ -569,7 +579,7 @@ class HH_Database(object):
                 if table.name == name_of_table:
                     return table
         elif tuple_name == "statistics":
-            return self.statistics[name_of_table]
+            return self.statistics.get(name_of_table, None)
         elif tuple_name == "columns":
             if name_of_column == "":
                 return self.columns.get(name_of_table, None)
@@ -669,10 +679,10 @@ class HH_Database(object):
         return return_string
         
 if __name__ == "__main__":
-    #solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")
-    solution_database_obj = HH_Database(r".\test_db_files\Solution.ACCDB")
-    #cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
-    cadet_database_obj = HH_Database(r".\test_db_files\1.ACCDB")
+    solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")
+    #solution_database_obj = HH_Database(r".\test_db_files\Solution.ACCDB")
+    cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
+    #cadet_database_obj = HH_Database(r".\test_db_files\2.ACCDB")
     
     #With an overloaded str function, you can print the database!
     print("==="*30)
@@ -685,8 +695,8 @@ if __name__ == "__main__":
     print(cadet_database_obj)
     print("==="*30)
 
-    #solution_database_obj.set_tables_to_grade(['Profile', 'FitnessTests', 'CadetInTest'])
-    solution_database_obj.set_tables_to_grade(['Run', 'Race', 'CadetRunsRace'])
+    solution_database_obj.set_tables_to_grade(['Profile', 'FitnessTests', 'CadetInTest'])
+    #solution_database_obj.set_tables_to_grade(['Run', 'Race', 'CadetRunsRace'])
     solution_database_obj.compare_with_other(cadet_database_obj)
     
 
