@@ -102,7 +102,6 @@ class HH_Database(object):
 
                 for stat in list(self.database_cursor.statistics(t.name)):
                     stat = table_statistic(*stat)
-                    # problem is still here with differentiating relationships...
                     if stat.non_unique == None:
                         self.statistics[t.name] = stat
                     #elif stat.non_unique == 0 and stat.table_name not in stat.index_name:
@@ -113,13 +112,10 @@ class HH_Database(object):
                             self.primary_keys[t.name].append(stat)
                     #elif stat.table_name in stat.index_name:
                     else:
-                        #I have serious doubts about this logic correctly
-                        #adding the right foreign keys...
-                        if stat.table_name in stat.index_name:
-                            if t.name not in self.foreign_keys:
-                                self.foreign_keys[t.name] = [stat]
-                            else:
-                                self.foreign_keys[t.name].append(stat)
+                        if t.name not in self.foreign_keys:
+                            self.foreign_keys[t.name] = [stat]
+                        else:
+                            self.foreign_keys[t.name].append(stat)
                         
                 for col in list(self.database_cursor.columns(t.name)):
                     col = column(*col)
@@ -301,22 +297,30 @@ class HH_Database(object):
             #print("solution:", solution_pk)
             compare_pk = other.get_namedtuple("primary_keys", table_name, solution_pk.column_name)
             if compare_pk == None:
-                    print("  -Mismatch detected in primary keys!!!")
-                    print("   -solution's primary key is: " + solution_pk.column_name)
-                    
-                    compares_actual_pk = other.get_namedtuple("primary_keys", table_name)
-                    if compares_actual_pk == None:
-                        print("    -cadet's has no primary key for this table!")
-                    else:                    
-                        for compare_pk_dict_key, compare_pks in other.primary_keys.items():
-                            if compare_pk_dict_key == table_name:
-                                print("   -cadet's primary keys are: ")
-                                for compare_pk in compare_pks:
-                                    print("      -" + compare_pk.column_name)
-                            
+                print("  -Mismatch detected in primary keys!!!")
+                sol_pks_string = ""
+                for pk_table_stat in solution_pk_list:
+                    sol_pks_string += pk_table_stat.column_name + ", "
+                sol_pks_string = sol_pks_string[:-2]
+                
+                print("   -solution's primary keys are: " + sol_pks_string)
+                
+                compares_actual_pk = other.get_namedtuple("primary_keys", table_name)
+                if compares_actual_pk == None:
+                    print("    -cadet's has no primary key for this table!")
+                else:
+                    compare_pk_string = ""
+                    for compare_pk_dict_key, compare_pks in other.primary_keys.items():
+                        if compare_pk_dict_key == table_name:
+                            for pk_table_stat in compare_pks:
+                                compare_pk_string += pk_table_stat.column_name + ", "
+                            compare_pk_string = compare_pk_string[:-2]
+                
+                    print("   -cadet's primary keys are   : " + compare_pk_string)
+                        
 
-                    mismatch_found = True
-                    continue
+                mismatch_found = True
+                continue
             #print("compare:",compare_pk)
             for field in solution_pk._fields:
                 if field in ignore_fields:
