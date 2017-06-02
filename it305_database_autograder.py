@@ -499,6 +499,13 @@ class HH_Database(object):
             #print("cadet:")
             #print(compare_col)
             
+            #correct mis-capitalized column name
+            for col in other.get_namedtuple("columns", cadet_alternate_spelling):
+                if col.column_name.casefold() == solution_col.column_name.casefold():
+                    #print("  -mis-capitalization detected in column name")
+                    compare_col = col
+                    break
+
             if compare_col == None:
                 print("    -" + solution_col.column_name + " does not match") 
                 print("      -Cadet is missing this column!  Cadet's columns are:")
@@ -740,7 +747,7 @@ if __name__ == "__main__":
     #solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")
     solution_database_obj = HH_Database(r".\test_db_files\Solution.ACCDB")
     #cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
-    cadet_database_obj = HH_Database(r".\test_db_files\4.ACCDB")
+    cadet_database_obj = HH_Database(r".\test_db_files\6.ACCDB")
     
     #With an overloaded str function, you can print the database!
     #print("==="*30)
