@@ -340,7 +340,7 @@ class HH_Database(object):
                 else:
                     compare_pk_string = ""
                     for compare_pk_dict_key, compare_pks in other.primary_keys.items():
-                        if compare_pk_dict_key == table_name:
+                        if compare_pk_dict_key == cadet_alternate_spelling:
                             for pk_table_stat in compare_pks:
                                 compare_pk_string += pk_table_stat.column_name + ", "
                             compare_pk_string = compare_pk_string[:-2]
