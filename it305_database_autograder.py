@@ -182,10 +182,18 @@ class HH_Database(object):
                     print("-"*30)
                     print("Checking table:", table_to_grade)
                     print("-"*30)
-                    self.compare_tables(other, table_to_grade)
-                    self.compare_columns(other, table_to_grade) 
-                    self.compare_primary_keys(other, table_to_grade)
-                    self.compare_foreign_keys(other, table_to_grade)
+                    
+                    #Check if cadet mis-capitalized their table
+                    cadet_alternate_spelling = ""
+                    for cadet_table in other.tables:
+                        alt_spelling = cadet_table.name
+                        if alt_spelling.casefold() == table_to_grade.casefold():
+                            cadet_alternate_spelling = alt_spelling
+                        
+                    self.compare_tables(other, table_to_grade, cadet_alternate_spelling)
+                    self.compare_columns(other, table_to_grade, cadet_alternate_spelling) 
+                    self.compare_primary_keys(other, table_to_grade, cadet_alternate_spelling)
+                    self.compare_foreign_keys(other, table_to_grade, cadet_alternate_spelling)
                     print()
                 print("-"*30)
                 print("Checking SQL queries")
@@ -193,7 +201,7 @@ class HH_Database(object):
                 self.compare_sql_queries(other)
                 print()
                 
-    def compare_tables(self, other, table_name):
+    def compare_tables(self, other, table_name, cadet_alternate_spelling = ""):
         """
         Compares a table from this database object with an identically named database
             from the "other" variable.
@@ -203,12 +211,15 @@ class HH_Database(object):
             identically named table will be compared.
         - table_name (str): The name of the table to be compared.
         """
+        if cadet_alternate_spelling == "":
+            cadet_alternate_spelling = table_name
+                    
         mismatch_found = False
 
         fields_to_ignore = ['catalog']
         
         solution_table = self.get_namedtuple("tables", table_name)
-        compare_table = other.get_namedtuple("tables", table_name)
+        compare_table = other.get_namedtuple("tables", cadet_alternate_spelling)
         #print(solution_table)
         #print(compare_table)
         
@@ -230,9 +241,9 @@ class HH_Database(object):
                 pass
                 #print(field, " matches")
         if not mismatch_found:
-            print("  -Fields for this table all check out.  Hooah!")  
+            print("  -Cadet has this table.  Hooah!")  
 
-    def compare_statistics(self, other, table_name):
+    def compare_statistics(self, other, table_name, cadet_alternate_spelling = ""):
         """
         Compares the statistics of a table from this database object with an identically named database from the "other" variable.
             
@@ -241,10 +252,13 @@ class HH_Database(object):
             identically named table will be compared.
         - table_name (str): The name of the table to be compared.
         """
+        if cadet_alternate_spelling == "":
+            cadet_alternate_spelling = table_name
+            
         mismatch_found = False
 
         solution_stat = self.get_namedtuple("statistics", table_name)
-        compare_stat = other.get_namedtuple("statistics", table_name)
+        compare_stat = other.get_namedtuple("statistics", cadet_alternate_spelling)
         #print(solution_stat)
         #print(compare_stat)
         if compare_stat == None:
@@ -268,7 +282,7 @@ class HH_Database(object):
         if not mismatch_found:
             print("  -Statistic fields all check out.  Hooah!")
                     
-    def compare_primary_keys(self, other, table_name):
+    def compare_primary_keys(self, other, table_name, cadet_alternate_spelling = ""):
         """
         Compares the primary keys from this database object with an 
         identically named database from the "other" variable.
@@ -278,12 +292,15 @@ class HH_Database(object):
             identically named table will be compared.
         - table_name (str): The name of the table to be compared.
         """
+        if cadet_alternate_spelling == "":
+            cadet_alternate_spelling = table_name
+            
         mismatch_found = False
 
         ignore_fields = ['table_catalog']
         
         solution_pk_list = self.get_namedtuple("primary_keys", table_name)
-        cadet_pk_list = other.get_namedtuple("primary_keys", table_name)
+        cadet_pk_list = other.get_namedtuple("primary_keys", cadet_alternate_spelling)
         
         if solution_pk_list == None:
             print("  -" + table_name + " does not have any primary keys.")
@@ -298,7 +315,7 @@ class HH_Database(object):
         
         for solution_pk in solution_pk_list:
             #print("solution:", solution_pk)
-            compare_pk = other.get_namedtuple("primary_keys", table_name, solution_pk.column_name)
+            compare_pk = other.get_namedtuple("primary_keys", cadet_alternate_spelling, solution_pk.column_name)
             if compare_pk == None:
                 print("  -Mismatch detected in primary keys!!!")
                 sol_pks_string = ""
@@ -306,9 +323,9 @@ class HH_Database(object):
                     sol_pks_string += pk_table_stat.column_name + ", "
                 sol_pks_string = sol_pks_string[:-2]
                 
-                print("   -solution's primary keys are: " + sol_pks_string)
+                print("    -solution's primary keys are: " + sol_pks_string)
                 
-                compares_actual_pk = other.get_namedtuple("primary_keys", table_name)
+                compares_actual_pk = other.get_namedtuple("primary_keys", cadet_alternate_spelling)
                 if compares_actual_pk == None:
                     print("    -cadet's has no primary key for this table!")
                 else:
@@ -319,7 +336,7 @@ class HH_Database(object):
                                 compare_pk_string += pk_table_stat.column_name + ", "
                             compare_pk_string = compare_pk_string[:-2]
                 
-                    print("   -cadet's primary keys are   : " + compare_pk_string)
+                    print("    -cadet's primary keys are   : " + compare_pk_string)
                         
 
                 mismatch_found = True
@@ -339,7 +356,7 @@ class HH_Database(object):
         if not mismatch_found:
             print("  -Primary Key fields all check out.  Hooah!") 
             
-    def compare_foreign_keys(self, other, table_name):
+    def compare_foreign_keys(self, other, table_name, cadet_alternate_spelling = ""):
         """
         Compares the primary keys from this database object with an 
         identically named database from the "other" variable.
@@ -349,12 +366,15 @@ class HH_Database(object):
             identically named table will be compared.
         - table_name (str): The name of the table to be compared.
         """
+        if cadet_alternate_spelling == "":
+            cadet_alternate_spelling = table_name
+            
         mismatch_found = False
 
         ignore_fields = ['table_catalog']
         
         solution_fk_list = self.get_namedtuple("foreign_keys", table_name)
-        cadet_fk_list = other.get_namedtuple("foreign_keys", table_name)
+        cadet_fk_list = other.get_namedtuple("foreign_keys", cadet_alternate_spelling)
         
         #print("Solution is:")
         #pprint(solution_fk_list)
@@ -408,7 +428,7 @@ class HH_Database(object):
         if not mismatch_found:
             print("  -Foreign Key fields all check out.  Hooah!")        
             
-    def compare_columns(self, other, table_name):
+    def compare_columns(self, other, table_name, cadet_alternate_spelling = ""):
         """
         Compares all the columns from a table from this database object with an 
         identically named table from the "other" variable.
@@ -418,6 +438,9 @@ class HH_Database(object):
             identically named table will be compared.
         - table_name (str): The name of the table whose columns will be compared.
         """
+        if cadet_alternate_spelling == "":
+            cadet_alternate_spelling = table_name
+            
         mismatch_found = False
 
         fields_to_ignore = ["table_catalog",
@@ -442,7 +465,7 @@ class HH_Database(object):
         
         for solution_col in solution_col_list:
         
-            compare_col = other.get_namedtuple("columns", table_name, solution_col.column_name)
+            compare_col = other.get_namedtuple("columns", cadet_alternate_spelling, solution_col.column_name)
             #print("solution:")
             #print(solution_col)
             #print("cadet:")
@@ -679,10 +702,10 @@ class HH_Database(object):
         return return_string
         
 if __name__ == "__main__":
-    solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")
-    #solution_database_obj = HH_Database(r".\test_db_files\Solution.ACCDB")
-    cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
-    #cadet_database_obj = HH_Database(r".\test_db_files\2.ACCDB")
+    #solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")
+    solution_database_obj = HH_Database(r".\test_db_files\Solution.ACCDB")
+    #cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
+    cadet_database_obj = HH_Database(r".\test_db_files\5.ACCDB")
     
     #With an overloaded str function, you can print the database!
     print("==="*30)
@@ -695,8 +718,8 @@ if __name__ == "__main__":
     print(cadet_database_obj)
     print("==="*30)
 
-    solution_database_obj.set_tables_to_grade(['Profile', 'FitnessTests', 'CadetInTest'])
-    #solution_database_obj.set_tables_to_grade(['Run', 'Race', 'CadetRunsRace'])
+    #solution_database_obj.set_tables_to_grade(['Profile', 'FitnessTests', 'CadetInTest'])
+    solution_database_obj.set_tables_to_grade(['Run', 'Race', 'CadetRunsRace'])
     solution_database_obj.compare_with_other(cadet_database_obj)
     
 
