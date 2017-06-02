@@ -6,7 +6,7 @@ import pypyodbc
 from pprint import pprint
 from named_tuples_definitions import *
 from operator import itemgetter
-
+import difflib
 
 # The Hutchison-Hussey (in that order) database class definition.
 class HH_Database(object):
@@ -185,10 +185,19 @@ class HH_Database(object):
                     
                     #Check if cadet mis-capitalized their table
                     cadet_alternate_spelling = ""
+                    found_case_mismatch = False
                     for cadet_table in other.tables:
                         alt_spelling = cadet_table.name
                         if alt_spelling.casefold() == table_to_grade.casefold():
                             cadet_alternate_spelling = alt_spelling
+                            found_case_mismatch = True
+                            break
+                    #Use difflib to find and compare the closest table name to 
+                    # the solutions table, and compare that one.
+                    if not found_case_mismatch:
+                        cadet_tables = [table.name for table in other.tables]
+                        cadet_alternate_spelling = difflib.get_close_matches(table_to_grade, cadet_tables, 1, 0.8)[0]
+                        print(" -No match found from cadet's tables.  Comparing to cadet's", cadet_alternate_spelling, "table instead")
                         
                     self.compare_tables(other, table_to_grade, cadet_alternate_spelling)
                     self.compare_columns(other, table_to_grade, cadet_alternate_spelling) 
@@ -235,7 +244,7 @@ class HH_Database(object):
             if getattr(solution_table, field) != getattr(compare_table, field):
                 print(" -Mismatch detected in tables!!!")
                 print("   -solution's " + field + " value is   :", getattr(solution_table, field))
-                print("   -cadet's " + field + " value is :", getattr(compare_table, field))
+                print("   -cadet's " + field + " value is      :", getattr(compare_table, field))
                 mismatch_found = True
             else:
                 pass
@@ -406,7 +415,7 @@ class HH_Database(object):
         
         for solution_fk in solution_fk_list:
             #print("solution:", solution_pk)
-            compare_fk = other.get_namedtuple("foreign_keys", table_name, solution_fk.column_name)
+            compare_fk = other.get_namedtuple("foreign_keys", cadet_alternate_spelling, solution_fk.column_name)
             if compare_fk == None:
                     print("  -Mismatch detected in foreign keys!!!")
                     print("   -solution's foreign key is: " + solution_fk.column_name)
@@ -489,8 +498,8 @@ class HH_Database(object):
                     if not already_printed_column_name:
                         print("    -" + solution_col.column_name, "does not match")
                         already_printed_column_name = True
-                    print("      -solution's " + field + " value is   :", getattr(solution_col, field))
-                    print("      -cadet's " + field + " value is :", getattr(compare_col, field))
+                    print("      -solution's " + field + " value is :", getattr(solution_col, field))
+                    print("      -cadet's " + field + " value is    :", getattr(compare_col, field))
                     
                 else:
                     pass
@@ -705,7 +714,7 @@ if __name__ == "__main__":
     #solution_database_obj = HH_Database(r".\DBTEEverB_SOLN.ACCDB")
     solution_database_obj = HH_Database(r".\test_db_files\Solution.ACCDB")
     #cadet_database_obj = HH_Database(r".\DBTEEverB.ACCDB")
-    cadet_database_obj = HH_Database(r".\test_db_files\5.ACCDB")
+    cadet_database_obj = HH_Database(r".\test_db_files\4.ACCDB")
     
     #With an overloaded str function, you can print the database!
     print("==="*30)
@@ -721,8 +730,4 @@ if __name__ == "__main__":
     #solution_database_obj.set_tables_to_grade(['Profile', 'FitnessTests', 'CadetInTest'])
     solution_database_obj.set_tables_to_grade(['Run', 'Race', 'CadetRunsRace'])
     solution_database_obj.compare_with_other(cadet_database_obj)
-    
-
-
-
-    
+ 
