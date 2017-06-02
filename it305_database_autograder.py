@@ -173,15 +173,15 @@ class HH_Database(object):
             comparrison between the two will fail.
         """
         if self.tables_to_grade == []:
-            print("***WARNING*** You haven't told me which tables to grade.  Call the set_tables_to_grade() method")
+            print("***WARNING*** You haven't told me which tables to grade. Call the set_tables_to_grade() method")
         else:
             with open(output_file_name, "wt") as out_file:
                 # maybe pass our out_file to these methods so they can write to the file themselves?
                 print
                 for table_to_grade in self.tables_to_grade:
-                    print("-"*30)
+                    print("="*30)
                     print("Checking table:", table_to_grade)
-                    print("-"*30)
+                    print("="*30)
                     
                     #Check if cadet mis-capitalized their table
                     cadet_alternate_spelling = ""
@@ -197,18 +197,18 @@ class HH_Database(object):
                     if not found_case_mismatch:
                         cadet_tables = [table.name for table in other.tables]
                         cadet_alternate_spelling = difflib.get_close_matches(table_to_grade, cadet_tables, 1, 0.8)[0]
-                        print(" -No match found from cadet's tables.  Comparing to cadet's", cadet_alternate_spelling, "table instead")
+                        print("  -No match found from cadet's tables. Comparing to cadet's", cadet_alternate_spelling, "table instead")
                         
                     self.compare_tables(other, table_to_grade, cadet_alternate_spelling)
                     self.compare_columns(other, table_to_grade, cadet_alternate_spelling) 
                     self.compare_primary_keys(other, table_to_grade, cadet_alternate_spelling)
                     self.compare_foreign_keys(other, table_to_grade, cadet_alternate_spelling)
                     print()
-                print("-"*30)
-                print("Checking SQL queries")
-                print("-"*30)    
-                self.compare_sql_queries(other)
-                print()
+                #print("-"*30)
+                #print("Checking SQL queries")
+                #print("-"*30)    
+                #self.compare_sql_queries(other)
+                #print()
                 
     def compare_tables(self, other, table_name, cadet_alternate_spelling = ""):
         """
@@ -220,6 +220,9 @@ class HH_Database(object):
             identically named table will be compared.
         - table_name (str): The name of the table to be compared.
         """
+        print("  " + "-"*30)
+        print("  CHECKING TABLE")
+        
         if cadet_alternate_spelling == "":
             cadet_alternate_spelling = table_name
                     
@@ -233,25 +236,28 @@ class HH_Database(object):
         #print(compare_table)
         
         if compare_table == None:
-            print("  -cadet is missing this table!  Here are the cadet's tables:")
+            print("  -cadet is missing this table! Here are the cadet's tables:")
             for table in other.tables:
                 print("    -" + table.name)
+            print("  " + "-"*30)
             return
         
         for field in solution_table._fields:
             if field in fields_to_ignore:
                 continue
             if getattr(solution_table, field) != getattr(compare_table, field):
-                print(" -Mismatch detected in tables!!!")
-                print("   -solution's " + field + " value is   :", getattr(solution_table, field))
-                print("   -cadet's " + field + " value is      :", getattr(compare_table, field))
+                print("  -Mismatch detected in tables!!!")
+                print("    -solution's " + field + " value is   :", getattr(solution_table, field))
+                print("    -cadet's " + field + " value is      :", getattr(compare_table, field))
                 mismatch_found = True
             else:
                 pass
                 #print(field, " matches")
         if not mismatch_found:
-            print("  -Cadet has this table.  Hooah!")  
-
+            print("  -Cadet has this table.  Hooah!")
+        
+        print("  " + "-"*30)
+            
     def compare_statistics(self, other, table_name, cadet_alternate_spelling = ""):
         """
         Compares the statistics of a table from this database object with an identically named database from the "other" variable.
@@ -271,7 +277,7 @@ class HH_Database(object):
         #print(solution_stat)
         #print(compare_stat)
         if compare_stat == None:
-            print("  -cadet is missing this table!  Here are the cadet's tables:")
+            print("  -cadet is missing this table! Here are the cadet's tables:")
             for table in other.tables:
                 print("    -" + table.name)
             return
@@ -301,6 +307,9 @@ class HH_Database(object):
             identically named table will be compared.
         - table_name (str): The name of the table to be compared.
         """
+        print("  " + "-"*30)
+        print("  CHECKING PRIMARY KEYS")
+        
         if cadet_alternate_spelling == "":
             cadet_alternate_spelling = table_name
             
@@ -313,6 +322,7 @@ class HH_Database(object):
         
         if solution_pk_list == None:
             print("  -" + table_name + " does not have any primary keys.")
+            print("  " + "-"*30)
             return
         
         #print("Solution is:")
@@ -364,7 +374,7 @@ class HH_Database(object):
                 #print(field, " matches")
         if not mismatch_found:
             print("  -Primary Key fields all check out.  Hooah!") 
-            
+        print("  " + "-"*30)    
     def compare_foreign_keys(self, other, table_name, cadet_alternate_spelling = ""):
         """
         Compares the primary keys from this database object with an 
@@ -375,6 +385,8 @@ class HH_Database(object):
             identically named table will be compared.
         - table_name (str): The name of the table to be compared.
         """
+        print("  " + "-"*30)
+        print("  CHECKING FOREIGN KEYS")
         if cadet_alternate_spelling == "":
             cadet_alternate_spelling = table_name
             
@@ -400,6 +412,7 @@ class HH_Database(object):
                 for fk in cadet_fk_list:
                     relationship_string = fk.index_name.split(fk.table_name)[0] + "-->" + fk.table_name
                     print("      -" + relationship_string + " : " + fk.column_name)
+            print("  " + "-"*30)
             return
 
         if cadet_fk_list == None:
@@ -410,6 +423,7 @@ class HH_Database(object):
                 print("      -" + relationship_string + " : " + fk.column_name)
             print("    -cadet's has no foreign keys for this table!!!")
             mismatch_found = True
+            print("  " + "-"*30)
             return
         
         
@@ -419,7 +433,10 @@ class HH_Database(object):
             if compare_fk == None:
                     print("  -Mismatch detected in foreign keys!!!")
                     print("   -solution's foreign key is: " + solution_fk.column_name)
-                    print("   -cadet's is missing this foreign key!!!")
+                    print("   -cadet's is missing this foreign key! Here are the cadet relationships for this table:")
+                    for fk in cadet_fk_list:
+                        relationship_string = fk.index_name.split(fk.table_name)[0] + "-->" + fk.table_name
+                        print("      -" + relationship_string + " : " + fk.column_name)
                     mismatch_found = True
                     continue
             #print("compare:",compare_pk)
@@ -436,7 +453,8 @@ class HH_Database(object):
                 #print(field, " matches")
         if not mismatch_found:
             print("  -Foreign Key fields all check out.  Hooah!")        
-            
+        print("  " + "-"*30)   
+        
     def compare_columns(self, other, table_name, cadet_alternate_spelling = ""):
         """
         Compares all the columns from a table from this database object with an 
@@ -447,6 +465,8 @@ class HH_Database(object):
             identically named table will be compared.
         - table_name (str): The name of the table whose columns will be compared.
         """
+        print("  " + "-"*30)
+        print("  CHECKING COLUMNS")
         if cadet_alternate_spelling == "":
             cadet_alternate_spelling = table_name
             
@@ -473,7 +493,6 @@ class HH_Database(object):
         #pprint(solution_col_list)
         
         for solution_col in solution_col_list:
-        
             compare_col = other.get_namedtuple("columns", cadet_alternate_spelling, solution_col.column_name)
             #print("solution:")
             #print(solution_col)
@@ -481,8 +500,15 @@ class HH_Database(object):
             #print(compare_col)
             
             if compare_col == None:
-                print("  -solution has column", solution_col.column_name)
-                print("  -Cadet is missing this column!")
+                print("    -" + solution_col.column_name + " does not match") 
+                print("      -Cadet is missing this column!  Cadet's columns are:")
+                compare_cols = other.get_namedtuple("columns", cadet_alternate_spelling)
+                column_string = ""
+                for col in [c.column_name for c in compare_cols]:
+                    column_string += col + ", "
+                print("        -" + column_string[:-2])
+                    
+                
                 mismatch_found = True
                 continue
             
@@ -506,7 +532,7 @@ class HH_Database(object):
                     #print(field, " matches")
         if not mismatch_found:
             print("  -Column fields all check out.  Hooah!")
-        
+        print("  " + "-"*30)
     def compare_sql_queries(self, other):
         """
         Compares all the sql queries from this database object with all the
@@ -717,15 +743,15 @@ if __name__ == "__main__":
     cadet_database_obj = HH_Database(r".\test_db_files\4.ACCDB")
     
     #With an overloaded str function, you can print the database!
-    print("==="*30)
-    print("Solution database is:")
-    print("==="*30)
-    print(solution_database_obj)
-    print("==="*30)
-    print("Cadet database is:")
-    print("==="*30)
-    print(cadet_database_obj)
-    print("==="*30)
+    #print("==="*30)
+    #print("Solution database is:")
+    #print("==="*30)
+    #print(solution_database_obj)
+    #print("==="*30)
+    #print("Cadet database is:")
+    #print("==="*30)
+    #print(cadet_database_obj)
+    #print("==="*30)
 
     #solution_database_obj.set_tables_to_grade(['Profile', 'FitnessTests', 'CadetInTest'])
     solution_database_obj.set_tables_to_grade(['Run', 'Race', 'CadetRunsRace'])
